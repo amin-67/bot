@@ -55,7 +55,7 @@ class Bot(ILovePDF):
             plugins = { "root" : "plugins" }    # Type: dict[str, str]
         )
 
-    async def start(self):
+    async def start(self, *args, **kwargs):
         """Initialize the bot by loading banned users, beta users, and custom thumbnails."""
 
         if dataBASE.MONGODB_URI:
@@ -107,7 +107,7 @@ class Bot(ILovePDF):
 
         # -----> Telebot/Pyrogram Client Starting <-----
         try:
-            await super().start()
+            await super().start(*args, **kwargs)
         except errors.FloodWait as e:
             logger.debug(f"wait {e.value} seconds.. automtically restarts..")
             
@@ -118,7 +118,7 @@ class Bot(ILovePDF):
                     logger.debug(f"Remaining seconds: {time}")
             
             # Restart the bot after waiting
-            await super().start()
+            await super().start(*args, **kwargs)
 
         # Retrieve and store bot ID
         myID.append(await app.get_me())
