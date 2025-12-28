@@ -332,8 +332,7 @@ async def get_color_by_name(COLOR_CODE):
         "B": [0, 0, 0],
         "W": [255, 255, 255],
     }
-    color = color_codes.get(COLOR_CODE, [0, 0, 0])
-    return [c / 255 for c in color]
+    return color_codes.get(COLOR_CODE, [0, 0, 0])
 
 
 async def get_position(pg_width, pg_height, text_width, position):
