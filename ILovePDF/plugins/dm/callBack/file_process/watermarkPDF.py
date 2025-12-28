@@ -389,34 +389,6 @@ async def add_text_watermark(
                 tw.write_text(page)
                 protection_report['layers_added'] += 1
                 
-                # 2. إضافة العلامة المائية الخفية باستخدام Steganography
-                stego_result = await add_steganographic_watermark(page, watermark_text)
-                if stego_result['status']:
-                    protection_report['steganography'] = True
-                
-                # 3. إضافة الحماية متعددة الطبقات
-                multilayer_result = await create_multilayer_protection(
-                    page, watermark_text, (txt_bottom, txt_left)
-                )
-                if multilayer_result['status']:
-                    protection_report['multilayer_protection'] = True
-                    protection_report['layers_added'] += multilayer_result['protection_layers']
-                
-                # 4. إضافة علامات مائية صغيرة منتشرة
-                for i in range(5):  # 5 علامات مائية صغيرة في كل صفحة
-                    small_x = random.randint(50, int(page.bound().width - 100))
-                    small_y = random.randint(50, int(page.bound().height - 50))
-                    
-                    small_tw = fitz.TextWriter(page.rect, opacity=0.02, color=[0, 0, 0])
-                    small_tw.append(
-                        (small_x, small_y),
-                        watermark_text[:3],  # أول 3 حروف فقط
-                        fontsize=8,
-                        font=font,
-                    )
-                    small_tw.write_text(page)
-                    protection_report['invisible_markers'] += 1
-                
                 # 5. إضافة بيانات مخفية في metadata الصفحة
                 page_info = {
                     'creator': f"Protected_{hashlib.sha256(watermark_text.encode()).hexdigest()[:10]}",
@@ -487,37 +459,6 @@ async def add_image_watermark(input_file, output_file, watermark, opacity, posit
                     stream=open(wa_file_no_bg, "rb").read(),
                 )
                 protection_report['layers_added'] += 1
-                
-                # 2. إضافة نسخ صغيرة غير مرئية في أماكن عشوائية
-                for i in range(8):  # 8 نسخ صغيرة
-                    small_x = random.randint(0, int(r.width - imgWidth // 4))
-                    small_y = random.randint(0, int(r.height - imgHeight // 4))
-                    
-                    small_rect = fitz.Rect(
-                        small_x, small_y, 
-                        small_x + imgWidth // 8, small_y + imgHeight // 8
-                    )
-                    
-                    # إدراج صورة صغيرة جداً بشفافية عالية
-                    page.insert_image(
-                        small_rect,
-                        stream=open(wa_file_no_bg, "rb").read(),
-                        overlay=True  # كطبقة علوية
-                    )
-                    protection_report['invisible_copies'] += 1
-                
-                # 3. إضافة علامة مائية نصية مخفية مشتقة من اسم الصورة
-                image_name = os.path.basename(wa_file)
-                stego_result = await add_steganographic_watermark(page, image_name)
-                if stego_result['status']:
-                    protection_report['steganography'] = True
-                
-                # 4. إضافة الحماية متعددة الطبقات
-                multilayer_result = await create_multilayer_protection(
-                    page, f"IMG_{image_name}", (main_rect.x0, main_rect.y0)
-                )
-                if multilayer_result['status']:
-                    protection_report['layers_added'] += multilayer_result['protection_layers']
             
             # حفظ آمن للملف
             try:
@@ -569,17 +510,6 @@ async def watermarkPDF(
             _color_clean = 'B'  # الأزرق كافتراضي
             logger.warning(f"⚠️ لون غير صحيح '{_color}', تم استخدام 'B' كبديل")
 
-        # تقرير الحماية المتقدم
-        advanced_protection_report = {
-            'protection_level': 'MAXIMUM_SECURITY',
-            'layers_count': 0,
-            'steganography_enabled': False,
-            'forensic_tracking': False,
-            'digital_signature': False,
-            'background_removed': False,
-            'total_protection_points': 0
-        }
-
         # Handle text watermark
         if _type == "txt":
             success, output_file = await add_text_watermark(
@@ -593,45 +523,6 @@ async def watermarkPDF(
             if not success:
                 return False, output_file
                 
-            # إضافة الحماية الرقمية للنص باستخدام ملف مؤقت
-            import tempfile
-            import shutil
-            
-            # إنشاء ملف مؤقت للمعالجة
-            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
-                temp_path = temp_file.name
-            
-            # نسخ الملف الأصلي إلى الملف المؤقت
-            shutil.copy2(output_file, temp_path)
-            
-            try:
-                pdf_doc = fitz.open(temp_path)
-                try:
-                    # إضافة التوقيع الرقمي
-                    digital_sig = await add_digital_signature_protection(pdf_doc, watermark)
-                    if digital_sig['status']:
-                        advanced_protection_report['digital_signature'] = True
-                        advanced_protection_report['layers_count'] += 3
-                    
-                    # إضافة العلامة المائية الجنائية
-                    for page_num in range(pdf_doc.page_count):
-                        page = pdf_doc[page_num]
-                        forensic_result = await create_forensic_watermark(page, watermark)
-                        if forensic_result['status']:
-                            advanced_protection_report['forensic_tracking'] = True
-                            advanced_protection_report['total_protection_points'] += forensic_result['pattern_points']
-                    
-                    # حفظ آمن للملف الأصلي
-                    pdf_doc.save(output_file)
-                    
-                finally:
-                    pdf_doc.close()
-            finally:
-                # تنظيف الملف المؤقت
-                import os
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
-                
         # Handle image watermark
         elif _type == "img":
             success, output_file = await add_image_watermark(
@@ -644,37 +535,6 @@ async def watermarkPDF(
             if not success:
                 return False, output_file
             
-            advanced_protection_report['background_removed'] = True
-            advanced_protection_report['layers_count'] += 10  # متعدد الطبقات للصور
-        
-        # حساب مستوى الحماية النهائي
-        protection_score = (
-            (advanced_protection_report['layers_count'] * 10) +
-            (50 if advanced_protection_report['steganography_enabled'] else 0) +
-            (100 if advanced_protection_report['forensic_tracking'] else 0) +
-            (75 if advanced_protection_report['digital_signature'] else 0) +
-            advanced_protection_report['total_protection_points']
-        )
-        
-        advanced_protection_report['protection_score'] = protection_score
-        
-        # رسالة نجاح مفصلة
-        success_message = f"""
-🛡️ تم تطبيق الحماية المتقدمة بنجاح!
-
-📊 مستوى الحماية: {protection_score} نقطة
-🔒 عدد الطبقات: {advanced_protection_report['layers_count']}
-🔍 التتبع الجنائي: {'✅' if advanced_protection_report['forensic_tracking'] else '❌'}
-📝 التوقيع الرقمي: {'✅' if advanced_protection_report['digital_signature'] else '❌'}
-🖼️ إزالة الخلفية: {'✅' if advanced_protection_report['background_removed'] else '❌'}
-
-⚠️ تحذير: هذه العلامة المائية محمية بتقنيات متقدمة ومتعددة الطبقات
-يستحيل حذفها دون ترك آثار واضحة للتلاعب!
-        """
-        
-        logger.info(f"🔐 حماية متقدمة مطبقة: {advanced_protection_report}")
-        print(success_message)  # عرض التقرير للمستخدم
-        
         return True, output_file
         
     except Exception as Error:
