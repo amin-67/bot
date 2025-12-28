@@ -363,31 +363,61 @@ async def add_text_watermark(
         with fitz.open(input_file) as pdf:
             for page_num, page in enumerate(pdf):
                 
-                # 1. العلامة المائية المرئية الرئيسية
-                font = fitz.Font(fontname="tiit")
-                text_width = font.text_length(
-                    watermark_text, fontsize=int(page.bound().height // 20)
-                )
+                if position == 'M':
+                    # Tiled Watermark (Strong Protection)
+                    r = page.rect
+                    # Use a smaller font for tiling to ensure coverage
+                    font_size = int(r.height // 30)
+                    font = fitz.Font(fontname="tiit")
+                    text_length = font.text_length(watermark_text, fontsize=font_size)
+                    
+                    # Calculate spacing
+                    vertical_spacing = font_size * 5
+                    horizontal_spacing = text_length * 1.5
+                    
+                    # Loop to cover the page with diagonal text
+                    # We extend the range to ensure coverage after rotation
+                    for i in range(-int(r.height), int(r.height * 2), int(vertical_spacing)):
+                        for j in range(-int(r.width), int(r.width * 2), int(horizontal_spacing)):
+                            # Add offset for brick pattern
+                            x_offset = (i // vertical_spacing) % 2 * (horizontal_spacing / 2)
+                            
+                            page.insert_text(
+                                (j + x_offset, i),
+                                watermark_text,
+                                fontsize=font_size,
+                                fontname="tiit",
+                                color=COLOR_CODE,
+                                fill_opacity=int(opacity) / 10,
+                                rotate=45  # Diagonal rotation
+                            )
+                    protection_report['layers_added'] += 1
+                else:
+                    # Single Position (Header/Footer)
+                    font = fitz.Font(fontname="tiit")
+                    text_width = font.text_length(
+                        watermark_text, fontsize=int(page.bound().height // 20)
+                    )
 
-                # إضافة العلامة المائية المرئية
-                tw = fitz.TextWriter(
-                    page.rect, opacity=int(opacity) / 10, color=COLOR_CODE
-                )
-                txt_bottom, txt_left = await get_position(
-                    pg_width=page.bound().width,
-                    pg_height=page.bound().height,
-                    text_width=text_width,
-                    position=position,
-                )
+                    # إضافة العلامة المائية المرئية
+                    tw = fitz.TextWriter(
+                        page.rect, opacity=int(opacity) / 10, color=COLOR_CODE
+                    )
+                    txt_bottom, txt_left = await get_position(
+                        pg_width=page.bound().width,
+                        pg_height=page.bound().height,
+                        text_width=text_width,
+                        position=position,
+                    )
 
-                tw.append(
-                    (txt_bottom, txt_left),
-                    watermark_text,
-                    fontsize=int(page.bound().height // 20),
-                    font=font,
-                )
-                tw.write_text(page)
-                protection_report['layers_added'] += 1
+                    tw.append(
+                        (txt_bottom, txt_left),
+                        watermark_text,
+                        fontsize=int(page.bound().height // 20),
+                        font=font,
+                    )
+                    tw.write_text(page)
+                    protection_report['layers_added'] += 1
                 
                 # 5. إضافة بيانات مخفية في metadata الصفحة
                 page_info = {
@@ -452,13 +482,38 @@ async def add_image_watermark(input_file, output_file, watermark, opacity, posit
             for page_num, page in enumerate(file_handle):
                 r = page.rect
                 
-                # 1. إدراج الصورة الرئيسية
-                main_rect = fitz.Rect(r.x0 / 4, 0, (r.x0 / 4) + imgHeight, imgWidth)
-                page.insert_image(
-                    main_rect,
-                    stream=open(wa_file_no_bg, "rb").read(),
-                )
-                protection_report['layers_added'] += 1
+                if position == 'M':
+                    # Tiled Image Watermark (Strong Protection)
+                    # Scale image down for tiling
+                    scale_factor = 0.2  # Make it smaller
+                    w = imgWidth * scale_factor
+                    h = imgHeight * scale_factor
+                    
+                    gap_x = w * 1.5
+                    gap_y = h * 1.5
+                    
+                    for y in range(0, int(r.height), int(gap_y)):
+                        for x in range(0, int(r.width), int(gap_x)):
+                            # Offset for brick pattern
+                            x_off = (y // gap_y) % 2 * (gap_x / 2)
+                            
+                            rect = fitz.Rect(x + x_off, y, x + x_off + w, y + h)
+                            # Only insert if it intersects with page
+                            if r.intersects(rect):
+                                page.insert_image(
+                                    rect,
+                                    stream=open(wa_file_no_bg, "rb").read(),
+                                )
+                    protection_report['layers_added'] += 1
+                else:
+                    # Single Position
+                    # 1. إدراج الصورة الرئيسية
+                    main_rect = fitz.Rect(r.x0 / 4, 0, (r.x0 / 4) + imgHeight, imgWidth)
+                    page.insert_image(
+                        main_rect,
+                        stream=open(wa_file_no_bg, "rb").read(),
+                    )
+                    protection_report['layers_added'] += 1
             
             # حفظ آمن للملف
             try:
