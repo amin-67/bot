@@ -322,15 +322,15 @@ async def add_steganographic_watermark(page, text, opacity=0.02):
 
 async def get_color_by_name(COLOR_CODE):
     color_codes = {
-        "R": [255, 0, 0],
-        "G": [0, 255, 0],
-        "N": [0, 0, 255],
-        "Y": [255, 255, 0],
-        "O": [255, 165, 0],
-        "V": [238, 130, 238],
-        "C": [165, 62, 62],
+        "R": [1, 0, 0],
+        "G": [0, 1, 0],
+        "N": [0, 0, 1],
+        "Y": [1, 1, 0],
+        "O": [1, 0.65, 0],
+        "V": [0.93, 0.51, 0.93],
+        "C": [0.65, 0.24, 0.24],
         "B": [0, 0, 0],
-        "W": [255, 255, 255],
+        "W": [1, 1, 1],
     }
     return color_codes.get(COLOR_CODE, [0, 0, 0])
 
