@@ -389,7 +389,7 @@ async def add_text_watermark(
                                 fontname="tiit",
                                 color=COLOR_CODE,
                                 fill_opacity=int(opacity) / 10,
-                                rotate=45  # Diagonal rotation
+                                rotate=90  # Diagonal rotation
                             )
                     protection_report['layers_added'] += 1
                 else:
