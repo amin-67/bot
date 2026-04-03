@@ -11,10 +11,14 @@ from plugins.utils import *
 @ILovePDF.on_callback_query(filters.regex("^nabilanavab"))
 async def __index__(bot, callbackQuery):
     try:
-        data = callbackQuery.data.split("|", 1)[1]  # "nabilanavab|"
+        if "|" in callbackQuery.data:
+            data = callbackQuery.data.split("|", 1)[1]
+        else:
+            data = None
+
         lang_code = await util.getLang(callbackQuery.message.chat.id)
 
-        if data.startswith("aio"):
+        if data and data.startswith("aio"):
             text, _ = await util.translate(text=f"_CLICK_RIGHT", lang_code=lang_code)
         else:
             text, _ = await util.translate(text=f"HELP['{data}']", lang_code=lang_code)
@@ -24,6 +28,3 @@ async def __index__(bot, callbackQuery):
     except Exception as Error:
         logger.exception("🐞 %s: %s" % (file_name, Error), exc_info=True)
         await work.work(callbackQuery, "delete", False)
-
-# If you have any questions or suggestions, please feel free to reach out.
-# Together, we can make this project even better, Happy coding!  XD
