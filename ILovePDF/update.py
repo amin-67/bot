@@ -5,7 +5,7 @@
 # thank drxxstrange@gmail.com for update.py ♥️
 
 
-file_name: str = "ILovePDF\update.py"
+file_name = "ILovePDF/update.py"
 
 import os, logging, dotenv
 from subprocess import run
